@@ -1,0 +1,13 @@
+{
+  "name": "code-collaborate-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/AkashChatterjee1999/code-collaborate-backend.git",
+  "author": "akashchatterjee1999 <akashchatterjee1000@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "uuidv4": "^6.2.11",
+    "ws": "^7.5.3"
+  }
+}
