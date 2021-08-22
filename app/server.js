@@ -9,7 +9,7 @@ functionalMap = {
         let connectedClients = [];
         clientInfo.forEach((client, clientId) => {
             connectedClients.push({
-                clientId, name: client.name, profilePic: client.profilePic, location: client.clientLocation, email: client.clientEmail
+                clientId, name: client.name, profilePic: client.profilePic, location: client.clientLocation, email: client.clientEmail, streamConstraints: client.streamConstraints
             })
         });
         return {"responseEvent": "OPEN", "responseType": "acknowledge", "metadataData": { id, connectedClients }}
@@ -17,8 +17,8 @@ functionalMap = {
     onClientDisconnected: clientID => {
         return {"responseEvent": "CLIENT_DISCONNECTED", "responseType": "info", "data": { clientID }}
     },
-    onClientJoined: (clientID, clientName, profilePic, location, email) => {
-        return {"responseEvent": "CLIENT_CONNECTED", "responseType": "info", "data": { clientID, clientName, profilePic, location, email }}
+    onClientJoined: (clientID, clientName, profilePic, location, email, streamConstraints) => {
+        return {"responseEvent": "CLIENT_CONNECTED", "responseType": "info", "data": { clientID, clientName, profilePic, location, email, streamConstraints }}
     },
     acknowledgeClientInfo: (id) => {
         return {"responseEvent": "ACKNOWLEDGE_CLIENT_INFO", "responseType": "acknowledge", "data": { id }}
@@ -55,6 +55,11 @@ broadCastMessage = message => {
     });
 }
 
+/*
+* TODO: Please check for validation in the JSON data from response
+*  events, sockets can be abused by corrupted data
+*/
+
 server.on('connection',ws => {
 
     /**
@@ -90,6 +95,8 @@ server.on('connection',ws => {
                 let profilePic = data.profilePic;
                 let clientLocation = data.location;
                 let clientEmail = data.clientEmail;
+                // Ignoring the previous stream state of the user
+                let streamConstraints = { video: true, audio: true };
 
                 // check weather this email already existed or not
                 let prevClientEmailExistedID = checkEmailExistedThenReturnId(clientEmail);
@@ -99,20 +106,23 @@ server.on('connection',ws => {
                     clientMap.delete(clientID);
                     clientMap.set(prevClientEmailExistedID, ws);
                     clientID = prevClientEmailExistedID;
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail});
+                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, streamConstraints});
                 } else {
                     console.log(clientName, "has joined the collaborate");
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail});
+                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, streamConstraints});
                 }
 
                 ws.send(JSON.stringify(functionalMap.acknowledgeClientInfo(clientID)));
 
-                let clientObj = functionalMap.onClientJoined(clientID, clientName, profilePic, clientLocation, clientEmail);
+                let clientObj = functionalMap.onClientJoined(clientID, clientName, profilePic, clientLocation, clientEmail, streamConstraints);
                 let stringifiedJSON = JSON.stringify(clientObj);
                 broadCastMessage(stringifiedJSON);
 
             } else if(data.responseEvent === 'CHAT') {
                 console.log("Chat Data: ", data);
+                broadCastMessage(JSON.stringify(data));
+            } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
+                console.log("Stream State: ", data);
                 broadCastMessage(JSON.stringify(data));
             }
         } else {
