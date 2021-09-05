@@ -134,8 +134,6 @@ codeCollabServer.on('connection', ws => {
             } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                 console.log("Stream State: ", data);
                 broadCastMessage(JSON.stringify(data));
-            } else if(data.responseEvent === 'UPDATED_CODE') {
-                broadCastMessage(JSON.stringify(data));
             } else if(data.responseEvent === 'ADD_CURSOR') {
                 cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
                 broadCastMessage(JSON.stringify(data));
