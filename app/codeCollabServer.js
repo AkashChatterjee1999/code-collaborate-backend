@@ -4,12 +4,26 @@ const codeCollabServer = new ws.Server({ host: "localhost", port: "5050" });
 let clientMap = new Map();
 let clientInfo = new Map();
 let cursorMap = new Map();
+let roomConnections = new Map();
 let clientCount = 0;
 
 functionalMap = {
     onOpenAcknowledgement: id => {
+        return {"responseEvent": "OPEN", "responseType": "acknowledge", "metadataData": { id }}
+    },
+    onClientDisconnected: clientID => {
+        -- clientCount;
+        return {"responseEvent": "CLIENT_DISCONNECTED", "responseType": "info", "data": { clientID }}
+    },
+    onClientJoined: (clientID, clientName, profilePic, location, email, streamConstraints) => {
+        ++ clientCount;
+        return {"responseEvent": "CLIENT_CONNECTED", "responseType": "info", "data": { clientID, clientName, profilePic, location, email, streamConstraints }}
+    },
+    acknowledgeClientInfo: (id, roomID) => {
         let connectedClients = [];
-        clientInfo.forEach((client, clientId) => {
+        console.log(roomConnections);
+        roomConnections.get(roomID).forEach(clientId => {
+            let client = clientInfo.get(clientId);
             let participantDetailObj = {
                 clientId, name: client.name,
                 profilePic: client.profilePic,
@@ -20,18 +34,7 @@ functionalMap = {
             if(cursorMap.get(clientId)) participantDetailObj.cursorPosition = cursorMap.get(clientId).cursorPosition
             connectedClients.push(participantDetailObj);
         });
-        return {"responseEvent": "OPEN", "responseType": "acknowledge", "metadataData": { id, connectedClients }}
-    },
-    onClientDisconnected: clientID => {
-        -- clientCount;
-        return {"responseEvent": "CLIENT_DISCONNECTED", "responseType": "info", "data": { clientID }}
-    },
-    onClientJoined: (clientID, clientName, profilePic, location, email, streamConstraints) => {
-        ++ clientCount;
-        return {"responseEvent": "CLIENT_CONNECTED", "responseType": "info", "data": { clientID, clientName, profilePic, location, email, streamConstraints }}
-    },
-    acknowledgeClientInfo: (id) => {
-        return {"responseEvent": "ACKNOWLEDGE_CLIENT_INFO", "responseType": "acknowledge", "data": { id }}
+        return {"responseEvent": "ACKNOWLEDGE_CLIENT_INFO", "responseType": "acknowledge", "data": { id, roomID, connectedClients }}
     }
 }
 
@@ -57,12 +60,13 @@ checkEmailExistedThenReturnId = (email) => {
     return undefined;
 }
 
-broadCastMessage = message => {
-    codeCollabServer.clients.forEach(client => {
-        if (client.readyState === ws.OPEN) {
-            client.send(message);
+broadCastMessage = (message, roomID) => {
+    roomConnections.get(roomID).forEach(clientID => {
+        let clientSocketConnection = clientMap.get(clientID);
+        if (clientSocketConnection.readyState === ws.OPEN) {
+            clientSocketConnection.send(message);
         }
-    });
+    })
 }
 
 /*
@@ -105,6 +109,8 @@ codeCollabServer.on('connection', ws => {
                 let profilePic = data.profilePic;
                 let clientLocation = data.location;
                 let clientEmail = data.clientEmail;
+                let roomID = data.roomID ? data.roomID : uuid.uuid();
+                console.log("Supplied roomID: ", data.roomID);
                 // Ignoring the previous stream state of the user
                 let streamConstraints = { video: true, audio: true };
 
@@ -116,35 +122,40 @@ codeCollabServer.on('connection', ws => {
                     clientMap.delete(clientID);
                     clientMap.set(prevClientEmailExistedID, ws);
                     clientID = prevClientEmailExistedID;
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, streamConstraints});
+                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, roomID, streamConstraints});
                 } else {
                     console.log(clientName, "has joined the collaborate");
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, streamConstraints});
+                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, roomID, streamConstraints});
                 }
 
-                ws.send(JSON.stringify(functionalMap.acknowledgeClientInfo(clientID)));
+                //Adding this client to my room;
+                if(!roomConnections.get(roomID)) roomConnections.set(roomID, [])
+                let roomParticipants = roomConnections.get(roomID)
+                roomParticipants.push(clientID);
+                roomConnections.set(roomID, roomParticipants);
+
+                ws.send(JSON.stringify(functionalMap.acknowledgeClientInfo(clientID, roomID)));
 
                 let clientObj = functionalMap.onClientJoined(clientID, clientName, profilePic, clientLocation, clientEmail, streamConstraints);
                 let stringifiedJSON = JSON.stringify(clientObj);
-                broadCastMessage(stringifiedJSON);
-
+                broadCastMessage(stringifiedJSON, roomID);
             } else if(data.responseEvent === 'CHAT') {
                 console.log("Chat Data: ", data);
-                broadCastMessage(JSON.stringify(data));
+                broadCastMessage(JSON.stringify(data), data.roomID);
             } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                 console.log("Stream State: ", data);
-                broadCastMessage(JSON.stringify(data));
+                broadCastMessage(JSON.stringify(data), data.roomID);
             } else if(data.responseEvent === 'ADD_CURSOR') {
                 cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
-                broadCastMessage(JSON.stringify(data));
+                broadCastMessage(JSON.stringify(data), data.data.roomID);
             } else if(data.responseEvent === 'CURSOR_POSITION_CHANGED') {
                 cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
-                broadCastMessage(JSON.stringify(data));
+                broadCastMessage(JSON.stringify(data), data.data.roomID);
             }
         } else {
             let { metadata } = data;
             if(!metadata || !metadata.to) {
-                broadCastMessage(data);
+                broadCastMessage(data, data.roomID);
             } else {
                 let client = clientMap.get(metadata.to);
                 if(client.readyState === ws.OPEN) {
@@ -163,14 +174,23 @@ codeCollabServer.on('connection', ws => {
     ws.on('close', () => {
         clientMap.forEach((client, clientID) => {
             if(client === ws) {
-                clientMap.delete(clientID);
-                cursorMap.delete(clientID);
+                let clientRoomID = clientInfo.get(clientID).roomID;
+                console.log(roomConnections, clientID, clientRoomID);
+                let filteredClients = roomConnections.get(clientRoomID).filter(connectedClientID => connectedClientID !== clientID);
+                roomConnections.set(clientRoomID, filteredClients); // Removed client from room
+                clientMap.delete(clientID); // deleted the client connection
+                cursorMap.delete(clientID); // removed the client's cursor position
                 console.log(clientInfo.get(clientID)?.name, "has disconnected the collaborate");
-                broadCastMessage(JSON.stringify(functionalMap.onClientDisconnected(clientID)));
+                console.log(roomConnections)
+                broadCastMessage(JSON.stringify(functionalMap.onClientDisconnected(clientID)), clientRoomID);
                 if(clientCount === 0) { //means session has already ended the flush the map
                     console.log("Flushing the maps");
-                    clientMap.clear();
-                    clientInfo.clear();
+                    let newClientInfo = new Map();
+                    clientInfo.forEach((clientData, clientID) => {
+                        if(clientData.roomID !== clientRoomID) newClientInfo.set(clientID, clientData);
+                    });
+                    clientInfo = newClientInfo;
+                    console.log("New client Info situation: ", clientInfo);
                 }
             }
         });
