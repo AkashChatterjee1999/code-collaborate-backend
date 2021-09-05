@@ -7,6 +7,8 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
+    "diffsync": "^2.1.2",
+    "socket.io": "^4.2.0",
     "uuidv4": "^6.2.11",
     "ws": "^7.5.3"
   }

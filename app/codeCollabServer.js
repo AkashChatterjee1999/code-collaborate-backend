@@ -1,23 +1,33 @@
 const ws = require("ws");
 const uuid = require("uuidv4");
-const server = new ws.Server({ host: "localhost", port: "5050" });
+const codeCollabServer = new ws.Server({ host: "localhost", port: "5050" });
 let clientMap = new Map();
 let clientInfo = new Map();
+let cursorMap = new Map();
+let clientCount = 0;
 
 functionalMap = {
     onOpenAcknowledgement: id => {
         let connectedClients = [];
         clientInfo.forEach((client, clientId) => {
-            connectedClients.push({
-                clientId, name: client.name, profilePic: client.profilePic, location: client.clientLocation, email: client.clientEmail, streamConstraints: client.streamConstraints
-            })
+            let participantDetailObj = {
+                clientId, name: client.name,
+                profilePic: client.profilePic,
+                location: client.clientLocation,
+                email: client.clientEmail,
+                streamConstraints: client.streamConstraints
+            }
+            if(cursorMap.get(clientId)) participantDetailObj.cursorPosition = cursorMap.get(clientId).cursorPosition
+            connectedClients.push(participantDetailObj);
         });
         return {"responseEvent": "OPEN", "responseType": "acknowledge", "metadataData": { id, connectedClients }}
     },
     onClientDisconnected: clientID => {
+        -- clientCount;
         return {"responseEvent": "CLIENT_DISCONNECTED", "responseType": "info", "data": { clientID }}
     },
     onClientJoined: (clientID, clientName, profilePic, location, email, streamConstraints) => {
+        ++ clientCount;
         return {"responseEvent": "CLIENT_CONNECTED", "responseType": "info", "data": { clientID, clientName, profilePic, location, email, streamConstraints }}
     },
     acknowledgeClientInfo: (id) => {
@@ -48,7 +58,7 @@ checkEmailExistedThenReturnId = (email) => {
 }
 
 broadCastMessage = message => {
-    server.clients.forEach(client => {
+    codeCollabServer.clients.forEach(client => {
         if (client.readyState === ws.OPEN) {
             client.send(message);
         }
@@ -60,7 +70,7 @@ broadCastMessage = message => {
 *  events, sockets can be abused by corrupted data
 */
 
-server.on('connection',ws => {
+codeCollabServer.on('connection', ws => {
 
     /**
      * Scenario1: Whenever we see that a new client ahs joined then do following steps
@@ -124,6 +134,14 @@ server.on('connection',ws => {
             } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                 console.log("Stream State: ", data);
                 broadCastMessage(JSON.stringify(data));
+            } else if(data.responseEvent === 'UPDATED_CODE') {
+                broadCastMessage(JSON.stringify(data));
+            } else if(data.responseEvent === 'ADD_CURSOR') {
+                cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
+                broadCastMessage(JSON.stringify(data));
+            } else if(data.responseEvent === 'CURSOR_POSITION_CHANGED') {
+                cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
+                broadCastMessage(JSON.stringify(data));
             }
         } else {
             let { metadata } = data;
@@ -148,8 +166,14 @@ server.on('connection',ws => {
         clientMap.forEach((client, clientID) => {
             if(client === ws) {
                 clientMap.delete(clientID);
+                cursorMap.delete(clientID);
                 console.log(clientInfo.get(clientID)?.name, "has disconnected the collaborate");
                 broadCastMessage(JSON.stringify(functionalMap.onClientDisconnected(clientID)));
+                if(clientCount === 0) { //means session has already ended the flush the map
+                    console.log("Flushing the maps");
+                    clientMap.clear();
+                    clientInfo.clear();
+                }
             }
         });
     });
