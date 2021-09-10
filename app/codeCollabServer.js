@@ -1,15 +1,20 @@
 const ws = require("ws");
 const uuid = require("uuidv4");
+const {error} = require("diffsync/src/commands");
 const codeCollabServer = new ws.Server({ host: "localhost", port: "5050" });
 let clientMap = new Map();
 let clientInfo = new Map();
 let cursorMap = new Map();
 let roomConnections = new Map();
+let roomHosts = new Map();
 let clientCount = 0;
 
 functionalMap = {
     onOpenAcknowledgement: id => {
         return {"responseEvent": "OPEN", "responseType": "acknowledge", "metadataData": { id }}
+    },
+    generateClientIDAndRoomID: (id, roomID) => {
+      return {"responseEvent": "FINALIZE_CLIENT_ID_ROOM_ID", "responseType": "response",  "data": { id, roomID }}
     },
     onClientDisconnected: clientID => {
         -- clientCount;
@@ -29,7 +34,8 @@ functionalMap = {
                 profilePic: client.profilePic,
                 location: client.clientLocation,
                 email: client.clientEmail,
-                streamConstraints: client.streamConstraints
+                streamConstraints: client.streamConstraints,
+                isHost: roomHosts.get(roomID) === clientId
             }
             if(cursorMap.get(clientId)) participantDetailObj.cursorPosition = cursorMap.get(clientId).cursorPosition
             connectedClients.push(participantDetailObj);
@@ -103,37 +109,48 @@ codeCollabServer.on('connection', ws => {
         }
 
         if(data.responseEvent) {
-            if(data.responseEvent === 'CLIENT_INFO') {
-                let clientName = data.clientName;
-                let clientID = data.clientID;
-                let profilePic = data.profilePic;
-                let clientLocation = data.location;
-                let clientEmail = data.clientEmail;
-                let roomID = data.roomID ? data.roomID : uuid.uuid();
-                console.log("Supplied roomID: ", data.roomID);
-                // Ignoring the previous stream state of the user
-                let streamConstraints = { video: true, audio: true };
-
-                // check weather this email already existed or not
+            if(data.responseEvent === 'ACKNOWLEDGE_OPEN_EVENT') {
+                // This clientID is the id the server sent when the connection was in open state
+                let {  clientEmail, roomID, clientID } = data;
                 let prevClientEmailExistedID = checkEmailExistedThenReturnId(clientEmail);
-                console.log("Previous Existed ID: ", prevClientEmailExistedID);
+
                 if(prevClientEmailExistedID) {
-                    // re-map the previous client with this clientID
                     clientMap.delete(clientID);
-                    clientMap.set(prevClientEmailExistedID, ws);
-                    clientID = prevClientEmailExistedID;
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, roomID, streamConstraints});
-                } else {
-                    console.log(clientName, "has joined the collaborate");
-                    clientInfo.set(clientID, {name: clientName, profilePic, clientLocation, clientEmail, roomID, streamConstraints});
+                    clientMap.delete(prevClientEmailExistedID);
+                }
+
+                clientID = prevClientEmailExistedID ? prevClientEmailExistedID : clientID;
+                clientMap.set(clientID, ws);
+
+                if(!roomConnections.get(roomID)) {
+                    roomID = uuid.uuid();
+                    roomConnections.set(roomID, []);
+                    roomHosts.set(roomID, clientID);
                 }
 
                 //Adding this client to my room;
-                if(!roomConnections.get(roomID)) roomConnections.set(roomID, [])
-                let roomParticipants = roomConnections.get(roomID)
+                let roomParticipants = roomConnections.get(roomID);
                 roomParticipants.push(clientID);
                 roomConnections.set(roomID, roomParticipants);
 
+                ws.send(JSON.stringify(functionalMap.generateClientIDAndRoomID(clientID, roomID)));
+
+            }
+            else if(data.responseEvent === 'CLIENT_INFO') {
+
+                let { clientName, clientID, profilePic, clientEmail, location:clientLocation, roomID } = data;
+                console.log("Supplied Data: ", data);
+
+                // Ignoring the previous stream state of the user
+                let streamConstraints = { video: true, audio: true };
+                if(!roomConnections.get(roomID).includes(clientID)) {
+                    console.log("Problem with code");
+                    process.exit();
+                } else {
+                    console.log(clientName, "has joined the collaborate");
+                    clientInfo.set(clientID, { name: clientName, profilePic, clientLocation, clientEmail, roomID, streamConstraints });
+                }
+                console.log(clientInfo);
                 ws.send(JSON.stringify(functionalMap.acknowledgeClientInfo(clientID, roomID)));
 
                 let clientObj = functionalMap.onClientJoined(clientID, clientName, profilePic, clientLocation, clientEmail, streamConstraints);
@@ -174,6 +191,7 @@ codeCollabServer.on('connection', ws => {
     ws.on('close', () => {
         clientMap.forEach((client, clientID) => {
             if(client === ws) {
+                console.log("THis client is leaving: ", clientID, clientInfo);
                 let clientRoomID = clientInfo.get(clientID).roomID;
                 console.log(roomConnections, clientID, clientRoomID);
                 let filteredClients = roomConnections.get(clientRoomID).filter(connectedClientID => connectedClientID !== clientID);
@@ -181,7 +199,7 @@ codeCollabServer.on('connection', ws => {
                 clientMap.delete(clientID); // deleted the client connection
                 cursorMap.delete(clientID); // removed the client's cursor position
                 console.log(clientInfo.get(clientID)?.name, "has disconnected the collaborate");
-                console.log(roomConnections)
+                console.log(roomConnections);
                 broadCastMessage(JSON.stringify(functionalMap.onClientDisconnected(clientID)), clientRoomID);
                 if(clientCount === 0) { //means session has already ended the flush the map
                     console.log("Flushing the maps");
