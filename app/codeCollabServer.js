@@ -161,6 +161,9 @@ codeCollabServer.on('connection', ws => {
                 broadCastMessage(JSON.stringify(data), data.roomID);
             } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                 console.log("Stream State: ", data);
+                let participantData = clientInfo.get(data.clientID);
+                participantData.streamConstraints = data.constraints;
+                clientInfo.set(data.clientID, participantData);
                 broadCastMessage(JSON.stringify(data), data.roomID);
             } else if(data.responseEvent === 'ADD_CURSOR') {
                 cursorMap.set(data.data.clientID, { cursorPosition: data.data.cursorPosition });
