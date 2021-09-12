@@ -12,7 +12,7 @@ jobs:
       - name: checkout to branch
         uses: actions/checkout@v2
       - name: update apk
-        uses: apk update
+        run: apk update
       - name: installing curl
         run: apk add -y curl
       - name: checking docker version
