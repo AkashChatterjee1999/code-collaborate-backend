@@ -11,13 +11,15 @@ jobs:
     steps:
       - name: checkout to branch
         uses: actions/checkout@v2
+      - name: installing curl
+        uses: apt-get install -u curl
       - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
-        run: curl https://cli-assets.heroku.com/install.sh | sudo sh
+        run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: checking heroku installation
         run: heroku --version
-      - name: Crete .netrc for heroku
+      - name: Create .netrc for heroku
         run: touch ~/.netrc
       - name: Write creds in .netrc
         run: echo "${{ secrets.HEROKU_NETRC }}" >> ~/.netrc
