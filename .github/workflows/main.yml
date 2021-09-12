@@ -7,7 +7,7 @@ jobs:
   build-and-deploy:
     name: build application and deploy
     runs-on: ubuntu-18.04
-    container: docker:20.10-dind
+    container: docker:19.03.12-dind
     steps:
       - name: checkout to branch
         uses: actions/checkout@v2
