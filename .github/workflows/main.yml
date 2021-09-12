@@ -12,8 +12,8 @@ jobs:
       - name: checkout to branch
         uses: actions/checkout@v2
       - name: apt-get update
-        run: sudo apt update
-      - name: checking installation
+        run: apt update
+      - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
         run: curl https://cli-assets.heroku.com/install.sh | sudo sh
@@ -52,8 +52,8 @@ jobs:
 
       # deploying all the images
       - name: Deploy codecollabserver
-        run: sudo heroku container:release web -a code-collaborate-backend
+        run: heroku container:release web -a code-collaborate-backend
       - name: Deploy diffsyncserver
-        run: sudo heroku container:release diffsyncserver -a code-collaborate-backend
+        run: heroku container:release diffsyncserver -a code-collaborate-backend
       - name: Deploy peerjsserver
-        run: sudo heroku container:release peerjsserver -a code-collaborate-backend
+        run: heroku container:release peerjsserver -a code-collaborate-backend
