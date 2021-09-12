@@ -7,15 +7,12 @@ jobs:
   build-and-deploy:
     name: build application and deploy
     runs-on: ubuntu-18.04
+    container: docker:20.10-dind
     steps:
       - name: checkout to branch
         uses: actions/checkout@v2
       - name: apt-get update
         run: sudo apt update
-      - name: installing docker
-        run: curl -fsSL https://get.docker.com -o get-docker.sh
-      - name: starting docker
-        run: sudo sh get-docker.sh
       - name: checking installation
         run: docker --version
       - name: Installing heroku cli
@@ -33,9 +30,9 @@ jobs:
       - name: Build codecollabserver
         run: docker build -f docker-setup/Dockerfile.codecollabserver -t codecollabserver .
       - name: Tag the built image with heroku
-        run: docker tag codecollabserver registry.heroku.com/code-collaborate-backend/codecollabserver
+        run: docker tag codecollabserver registry.heroku.com/code-collaborate-backend/web
       - name: Push the image to heroku
-        run: docker push registry.heroku.com/code-collaborate-backend/codecollabserver
+        run: docker push registry.heroku.com/code-collaborate-backend/web
 
       # Building and pushing diff-sync-server
       - name: Build diffsyncserver
@@ -55,7 +52,7 @@ jobs:
 
       # deploying all the images
       - name: Deploy codecollabserver
-        run: sudo heroku container:release codecollabserver -a code-collaborate-backend
+        run: sudo heroku container:release web -a code-collaborate-backend
       - name: Deploy diffsyncserver
         run: sudo heroku container:release diffsyncserver -a code-collaborate-backend
       - name: Deploy peerjsserver

@@ -1,3 +1,3 @@
-codecollabserver: node app/codeCollabServer.js
+web: node app/codeCollabServer.js
 diffsyncserver: node app/diffSyncServer.js
 peerjsserver: node app/peerServer.js
