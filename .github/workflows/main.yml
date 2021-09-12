@@ -1,4 +1,4 @@
-name: "Application Dpeloyer"
+name: "Application Deployer"
 on:
   push:
     branches:
@@ -55,8 +55,8 @@ jobs:
 
       # deploying all the images
       - name: Deploy codecollabserver
-        run: heroku container:release codecollabserver -a code-collaborate-backend
+        run: sudo heroku container:release codecollabserver -a code-collaborate-backend
       - name: Deploy diffsyncserver
-        run: heroku container:release diffsyncserver -a code-collaborate-backend
+        run: sudo heroku container:release diffsyncserver -a code-collaborate-backend
       - name: Deploy peerjsserver
-        run: heroku container:release peerjsserver -a code-collaborate-backend
+        run: sudo heroku container:release peerjsserver -a code-collaborate-backend
