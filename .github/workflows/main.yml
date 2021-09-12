@@ -14,7 +14,7 @@ jobs:
       - name: update apk
         run: apk update
       - name: installing curl
-        run: apk add -y curl
+        run: apk add curl
       - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
