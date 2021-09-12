@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: checkout to branch
         uses: actions/checkout@v2
-      - name: apt-get update
-        run: apt update
       - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
