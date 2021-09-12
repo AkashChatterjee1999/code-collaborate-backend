@@ -1,0 +1,9 @@
+build:
+  docker:
+    codecollabserver: ./docker-setup/Dockerfile.codecollabserver
+    diffsyncserver: ./docker-setup/Dockerfile.diffsyncserver
+    peerjsserver: ./docker-setup/Dockerfile.peerjsserver
+  run:
+    codecollabserver: node app/codeCollabServer.js
+    diffsyncserver: node app/diffSyncServer.js
+    peerjsserver: node app/peerServer.js
