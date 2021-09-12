@@ -18,7 +18,7 @@ jobs:
       - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
-        run: curl https://cli-assets.heroku.com/install.sh | /bin/sh
+        run: curl https://cli-assets.heroku.com/install.sh | bash
       - name: checking heroku installation
         run: heroku --version
       - name: Create .netrc for heroku
