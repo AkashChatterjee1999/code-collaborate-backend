@@ -12,7 +12,7 @@ jobs:
       - name: checkout to branch
         uses: actions/checkout@v2
       - name: installing curl
-        uses: apt-get install -u curl
+        run: apt-get install -y curl
       - name: checking docker version
         run: docker --version
       - name: Installing heroku cli
