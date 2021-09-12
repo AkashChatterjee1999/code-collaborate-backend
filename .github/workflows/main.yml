@@ -7,18 +7,19 @@ jobs:
   build-and-deploy:
     name: build application and deploy
     runs-on: ubuntu-18.04
-    container: docker:19.03.12-dind
     steps:
       - name: checkout to branch
         uses: actions/checkout@v2
-      - name: update apk
-        run: apk update
-      - name: installing curl
-        run: apk add curl
-      - name: checking docker version
+      - name: apt-get update
+        run: sudo apt update
+      - name: installing docker
+        run: curl -fsSL https://get.docker.com -o get-docker.sh
+      - name: starting docker
+        run: sudo sh get-docker.sh
+      - name: checking installation
         run: docker --version
       - name: Installing heroku cli
-        run: curl https://cli-assets.heroku.com/install.sh | bash
+        run: curl https://cli-assets.heroku.com/install.sh | sudo sh
       - name: checking heroku installation
         run: heroku --version
       - name: Create .netrc for heroku
@@ -54,8 +55,8 @@ jobs:
 
       # deploying all the images
       - name: Deploy codecollabserver
-        run: heroku container:release web -a code-collaborate-backend
+        run: sudo heroku container:release web -a code-collaborate-backend
       - name: Deploy diffsyncserver
-        run: heroku container:release diffsyncserver -a code-collaborate-backend
+        run: sudo heroku container:release diffsyncserver -a code-collaborate-backend
       - name: Deploy peerjsserver
-        run: heroku container:release peerjsserver -a code-collaborate-backend
+        run: sudo heroku container:release peerjsserver -a code-collaborate-backend
