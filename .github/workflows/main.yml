@@ -1,0 +1,62 @@
+name: "Application Dpeloyer"
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-deploy:
+    name: build application and deploy
+    runs-on: ubuntu-18.04
+    steps:
+      - name: checkout to branch
+        uses: actions/checkout@v2
+      - name: apt-get update
+        run: sudo apt update
+      - name: installing docker
+        run: curl -fsSL https://get.docker.com -o get-docker.sh
+      - name: starting docker
+        run: sudo sh get-docker.sh
+      - name: checking installation
+        run: docker --version
+      - name: Installing heroku cli
+        run: sudo snap install --classic heroku
+      - name: checking heroku installation
+        run: heroku --version
+      - name: Crete .netrc for heroku
+        run: touch ~/.netrc
+      - name: Write creds in .netrc
+        run: echo "${{ secrets.HEROKU_NETRC }}" >> ~/.netrc
+      - name: login to docker
+        run: docker login --username=_ --password=$(heroku auth:token) registry.heroku.com
+
+      # Building and pushing code-collab-server
+      - name: Build codecollabserver
+        run: docker build -f docker-setup/Dockerfile.codecollabserver -t codecollabserver .
+      - name: Tag the built image with heroku
+        run: docker tag codecollabserver registry.heroku.com/code-collaborate-backend/codecollabserver
+      - name: Push the image to heroku
+        run: docker push registry.heroku.com/code-collaborate-backend/codecollabserver
+
+      # Building and pushing diff-sync-server
+      - name: Build diffsyncserver
+        run: docker build -f docker-setup/Dockerfile.diffsyncserver -t diffsyncserver .
+      - name: Tag the built image with heroku
+        run: docker tag diffsyncserver registry.heroku.com/code-collaborate-backend/diffsyncserver
+      - name: Push the image to heroku
+        run: docker push registry.heroku.com/code-collaborate-backend/diffsyncserver
+
+      # Building and pushing peerjs-server
+      - name: Build peerjsserver
+        run: docker build -f docker-setup/Dockerfile.peerjsserver -t peerjsserver .
+      - name: Tag the built image with heroku
+        run: docker tag peerjsserver registry.heroku.com/code-collaborate-backend/peerjsserver
+      - name: Push the image to heroku
+        run: docker push registry.heroku.com/code-collaborate-backend/peerjsserver
+
+      # deploying all the images
+      - name: Deploy codecollabserver
+        run: heroku container:release codecollabserver -a code-collaborate-backend
+      - name: Deploy diffsyncserver
+        run: heroku container:release diffsyncserver -a code-collaborate-backend
+      - name: Deploy peerjsserver
+        run: heroku container:release peerjsserver -a code-collaborate-backend

@@ -12,6 +12,7 @@ RUN /bin/sh nodesource_setup.sh
 RUN apt install -y nodejs
 RUN node -v
 
+COPY ./ ./
 RUN npm install -g yarn
 RUN yarn
 
