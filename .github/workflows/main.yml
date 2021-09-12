@@ -19,7 +19,7 @@ jobs:
       - name: checking installation
         run: docker --version
       - name: Installing heroku cli
-        run: sudo snap install --classic heroku
+        run: curl https://cli-assets.heroku.com/install.sh | sudo sh
       - name: checking heroku installation
         run: heroku --version
       - name: Crete .netrc for heroku
