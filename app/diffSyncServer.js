@@ -13,6 +13,7 @@ httpServer.on('clientError', (err, socket) => {
 });
 
 const socket = io(httpServer,{
+    path: "/diffSync-socket",
     cors: {
         origin: "*",
         methods: "*"
@@ -23,5 +24,5 @@ let dataAdapter = new diffSync.InMemoryDataAdapter();
 let diffSyncServer = new diffSync.Server(dataAdapter, socket);
 
 // starting the http server
-httpServer.listen(5051, () => console.log(`The DiffSync Server is ready`));
+httpServer.listen(process.env.PORT, () => console.log(`The DiffSync Server is ready and listening to port: ${process.env.PORT}`));
 

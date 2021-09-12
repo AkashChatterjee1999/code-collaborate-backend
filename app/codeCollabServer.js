@@ -1,13 +1,14 @@
 const ws = require("ws");
 const uuid = require("uuidv4");
-const {error} = require("diffsync/src/commands");
-const codeCollabServer = new ws.Server({ host: "localhost", port: "5050" });
-let clientMap = new Map();
-let clientInfo = new Map();
-let cursorMap = new Map();
-let roomConnections = new Map();
-let roomHosts = new Map();
-let clientCount = 0;
+const express = require("express");
+
+const server = express().listen(process.env.PORT, () => console.log(`Listening on ${process.env.PORT}`));
+
+const codeCollabServer = new ws.Server({ server, path: "/codeCollab-socket" });
+let clientMap = new Map(), clientInfo = new Map(), cursorMap = new Map(), roomConnections = new Map();
+let roomHosts = new Map(), clientCount = 0;
+
+console.log("Code-collaborate socket server started @PORT:",process.env.PORT)
 
 functionalMap = {
     onOpenAcknowledgement: id => {
