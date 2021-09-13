@@ -27,6 +27,11 @@ const initializeCodeCollabService = codeCollabServer => {
                 "data": {clientID, clientName, profilePic, location, email, streamConstraints}
             }
         },
+        acknowledgeHeartbeat: () => {
+            return {
+                "responseEvent": "ACKNOWLEDGE_HEARTBEAT",
+            }
+        },
         acknowledgeClientInfo: (id, roomID) => {
             let connectedClients = [];
             console.log(roomConnections);
@@ -166,6 +171,8 @@ const initializeCodeCollabService = codeCollabServer => {
                 } else if(data.responseEvent === 'CHAT') {
                     console.log("Chat Data: ", data);
                     broadCastMessage(JSON.stringify(data), data.roomID);
+                } else if(data.responseEvent === 'HEARTBEAT') {
+                    ws.send(JSON.stringify(functionalMap.acknowledgeHeartbeat()))
                 } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                     console.log("Stream State: ", data);
                     let participantData = clientInfo.get(data.clientID);
