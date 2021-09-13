@@ -37,26 +37,6 @@ jobs:
       - name: Push the image to heroku
         run: docker push registry.heroku.com/code-collaborate-backend/web
 
-      # Building and pushing diff-sync-server
-      - name: Build diffsyncserver
-        run: docker build -f docker-setup/Dockerfile.diffsyncserver -t diffsyncserver .
-      - name: Tag the built image with heroku
-        run: docker tag diffsyncserver registry.heroku.com/code-collaborate-backend/diffsyncserver
-      - name: Push the image to heroku
-        run: docker push registry.heroku.com/code-collaborate-backend/diffsyncserver
-
-      # Building and pushing peerjs-server
-      - name: Build peerjsserver
-        run: docker build -f docker-setup/Dockerfile.peerjsserver -t peerjsserver .
-      - name: Tag the built image with heroku
-        run: docker tag peerjsserver registry.heroku.com/code-collaborate-backend/peerjsserver
-      - name: Push the image to heroku
-        run: docker push registry.heroku.com/code-collaborate-backend/peerjsserver
-
       # deploying all the images
       - name: Deploy codecollabserver
         run: sudo heroku container:release web -a code-collaborate-backend
-      - name: Deploy diffsyncserver
-        run: sudo heroku container:release diffsyncserver -a code-collaborate-backend
-      - name: Deploy peerjsserver
-        run: sudo heroku container:release peerjsserver -a code-collaborate-backend
