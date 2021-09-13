@@ -31,7 +31,7 @@ jobs:
 
       # Building and pushing code-collab-server
       - name: Build codecollabserver
-        run: docker build -f docker-setup/Dockerfile.codecollabserver -t codecollabserver .
+        run: docker build -t codecollabserver .
       - name: Tag the built image with heroku
         run: docker tag codecollabserver registry.heroku.com/code-collaborate-backend/web
       - name: Push the image to heroku
