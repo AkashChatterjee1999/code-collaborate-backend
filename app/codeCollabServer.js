@@ -1,5 +1,6 @@
 const ws = require("ws");
 const uuid = require("uuidv4");
+let availableRoomIDs = [];
 
 const initializeCodeCollabService = codeCollabServer => {
 
@@ -136,6 +137,7 @@ const initializeCodeCollabService = codeCollabServer => {
 
                     if(!roomConnections.get(roomID)) {
                         roomID = uuid.uuid();
+                        availableRoomIDs.push(roomID);
                         roomConnections.set(roomID, []);
                         roomHosts.set(roomID, clientID);
                     }
@@ -173,6 +175,9 @@ const initializeCodeCollabService = codeCollabServer => {
                     broadCastMessage(JSON.stringify(data), data.roomID);
                 } else if(data.responseEvent === 'HEARTBEAT') {
                     ws.send(JSON.stringify(functionalMap.acknowledgeHeartbeat()))
+                } else if(data.responseEvent === 'CODE_OUTPUT_GENERATED') {
+                    console.log("Output msg payload: ", data);
+                    broadCastMessage(JSON.stringify(data), data.roomID);
                 } else if(data.responseEvent === 'STREAM_STATE_CHANGE') {
                     console.log("Stream State: ", data);
                     let participantData = clientInfo.get(data.clientID);
@@ -208,7 +213,7 @@ const initializeCodeCollabService = codeCollabServer => {
         ws.on('close', () => {
             clientMap.forEach((client, clientID) => {
                 if(client === ws) {
-                    console.log("THis client is leaving: ", clientID, clientInfo);
+                    console.log("This client is leaving: ", clientID, clientInfo);
                     let clientRoomID = clientInfo.get(clientID)?.roomID;
                     console.log(roomConnections, clientID, clientRoomID);
                     let filteredClients = roomConnections.get(clientRoomID)?.filter(connectedClientID => connectedClientID !== clientID);
@@ -219,12 +224,12 @@ const initializeCodeCollabService = codeCollabServer => {
                     console.log(roomConnections);
                     broadCastMessage(JSON.stringify(functionalMap.onClientDisconnected(clientID)), clientRoomID);
                     if(clientCount === 0) { //means session has already ended the flush the map
-                        console.log("Flushing the maps");
-                        let newClientInfo = new Map();
-                        clientInfo.forEach((clientData, clientID) => {
-                            if(clientData.roomID !== clientRoomID) newClientInfo.set(clientID, clientData);
-                        });
-                        clientInfo = newClientInfo;
+                        console.log("Flushing the maps, since no clients is using the service.... service will be killed after some time");
+                        // let newClientInfo = new Map();
+                        // clientInfo.forEach((clientData, clientID) => {
+                        //     if(clientData.roomID !== clientRoomID) newClientInfo.set(clientID, clientData);
+                        // });
+                        clientInfo = new Map();
                         console.log("New client Info situation: ", clientInfo);
                     }
                 }
@@ -234,4 +239,4 @@ const initializeCodeCollabService = codeCollabServer => {
     });
 }
 
-module.exports = { initializeCodeCollabService }
+module.exports = { initializeCodeCollabService, availableRoomIDs }
