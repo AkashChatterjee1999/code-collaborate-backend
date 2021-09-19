@@ -2,10 +2,11 @@ const { createServer } = require("http");
 const { WebSocketServer } = require('ws');
 const {initializeCodeCollabService, availableRoomIDs} = require("./codeCollabServer");
 const diffSync = require("diffsync");
+const cors = require("cors");
 const { initializeDiffSyncService } = require("./diffSyncServer");
 const express = require("express");
 
-const app = express()
+const app = express();
 const server = createServer(app);
 
 const { dataAdapter, socket } = initializeDiffSyncService(server);
@@ -14,6 +15,7 @@ let diffSyncServer = new diffSync.Server(dataAdapter, socket);
 const codeCollabServer = new WebSocketServer({ server, path: "/codeCollab-socket", secure: true });
 initializeCodeCollabService(codeCollabServer);
 
+app.use(cors);
 app.get("/api/v1/roomID/validate/:roomID", (req, res) => {
     let roomID = req.params.roomID;
     if(availableRoomIDs.includes(roomID)) {
