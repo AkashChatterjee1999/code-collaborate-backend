@@ -15,7 +15,7 @@ let diffSyncServer = new diffSync.Server(dataAdapter, socket);
 const codeCollabServer = new WebSocketServer({ server, path: "/codeCollab-socket", secure: true });
 initializeCodeCollabService(codeCollabServer);
 
-app.use(cors);
+app.use(cors());
 app.get("/api/v1/roomID/validate/:roomID", (req, res) => {
     let roomID = req.params.roomID;
     if(availableRoomIDs.includes(roomID)) {
